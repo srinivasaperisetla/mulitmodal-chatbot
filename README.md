@@ -39,14 +39,15 @@ Before running the application, ensure the following are installed on your syste
 1. **Open a New Terminal**:
    Open another terminal window or tab.
 
-2. **Navigate to the Backend Directory**:
+2. **Navigate to the Frontend Directory**:
    ```bash
-   cd backend
+   cd frontend
    ```
 
 3. **Start the Next.js Application**:
-   Run the following command to start the Next.js development server:
+   Run the following commands to start the Next.js development server:
    ```bash
+   npm install
    npm run dev
    ```
 
