@@ -66,7 +66,7 @@
     </div>
 
     <script defer>
-        const URL = "ws://localhost:9080";
+        const URL = "ws://localhost:9082";
         const video = document.getElementById("videoElement");
         const canvas = document.getElementById("canvasElement");
         const context = canvas.getContext("2d");
@@ -113,7 +113,6 @@
                 context.drawImage(video, 0, 0, canvas.width, canvas.height);
                 const imageData = canvas.toDataURL("image/jpeg").split(",")[1].trim();
                 currentFrameB64 = imageData;
-
             }
         }
 
@@ -151,9 +150,9 @@
             console.log("sending setup message");
             setup_client_message = {
                 setup: {
-                   generation_config: { response_modalities: ["AUDIO"] },
-               },
-            };
+                    generation_config: { response_modalities: ["AUDIO"] },
+                  },
+                };
 
             webSocket.send(JSON.stringify(setup_client_message));
         }
@@ -184,17 +183,14 @@
         }
 
         function receiveMessage(event) {
-            console.log("Received message:", event.data);
             const messageData = JSON.parse(event.data);
-            console.log("Parsed message data:", messageData);
             const response = new Response(messageData);
 
             if(response.text){
                 displayMessage("GEMINI: " + response.text);
             }
             if(response.audioData){
-                console.log("Received audio data:", response.audioData);
-                injestAudioChuckToPlay(response.audioData);
+              injestAudioChuckToPlay(response.audioData);
             }
         }
 
@@ -263,10 +259,6 @@
             );
 
            sendVoiceMessage(base64);
-           console.log("pcmData.current: ",pcmData)
-            console.log("buffer: ",buffer)
-            console.log("view: ",view)
-            console.log("base64: ",base64)
           pcmData = [];
         }
 
@@ -287,13 +279,11 @@
 
             processor.onaudioprocess = (e) => {
                 const inputData = e.inputBuffer.getChannelData(0);
-                const pcm16 = new Int16Array(inputData.length);
+                 const pcm16 = new Int16Array(inputData.length);
                 for (let i = 0; i < inputData.length; i++) {
                     pcm16[i] = inputData[i] * 0x7fff;
                 }
-                // console.log(pcm16)
                 pcmData.push(...pcm16);
-                // console.log("pcmData:  " , pcmData)
             };
 
             source.connect(processor);

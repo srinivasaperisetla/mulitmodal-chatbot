@@ -1,13 +1,22 @@
 "use client"
 import Image from "next/image";
 import { useState, useRef, useEffect } from "react";
+import { FaMicrophone, FaPaperPlane, FaVideo, FaDesktop, FaStar, FaTimes } from "react-icons/fa";
+
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export default function Home() {
 
+  const API_KEY = "";
+  const genAI = new GoogleGenerativeAI(API_KEY);  
+
   const[isMicOn, setIsMicOn] = useState(false);
   const[isWebCamOn, setIsWebCamOn] = useState(false);
+  const[isScreenShareOn, setIsScreenShareOn] = useState(false);
 
-  const [messages, setMessages] = useState<string[]>([]);
+  const [inputMessage, setInputMessage] = useState("");
+
+  const [messages, setMessages] = useState<{ text: string; sender: "user" | "ai" }[]>([]);
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const processorRef = useRef<AudioWorkletNode | null>(null);
@@ -15,7 +24,6 @@ export default function Home() {
   const videoIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const pcmData = useRef<number[]>([]); 
-  // const pcmData = useRef<Int16Array[]>([]);
   const currentFrameB64Ref = useRef<string | null>(null);
 
   const initializedRef = useRef(false);
@@ -24,6 +32,7 @@ export default function Home() {
 
   const videoStreamRef = useRef<MediaStream | null>(null); // Separate ref for video
   const audioStreamRef = useRef<MediaStream | null>(null);
+  const screenShareStreamRef = useRef<MediaStream | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -92,7 +101,7 @@ export default function Home() {
 
     if (response.text) {
       console.log('text')
-      displayMessage("GEMINI: " + response.text);
+      displayMessage({text: response.text, sender: "ai"});
     }
 
     if (response.audioData) {
@@ -101,7 +110,7 @@ export default function Home() {
     }
   }
 
-  const displayMessage = (message: string) => {
+  const displayMessage = (message: { text: string; sender: "user" | "ai" }) => {
     console.log("displaying message: ", message);
     setMessages((prevMessages) => [...prevMessages, message]);
   }
@@ -201,12 +210,76 @@ export default function Home() {
     setIsWebCamOn((prevState) => {
       if(!prevState){
         startWebCam();
+        stopScreenShare();
+        setIsScreenShareOn(false);
       }
       else if(prevState){
         stopWebCam();
       }
       return !prevState;
     })
+  }
+
+  const handleScreenShareToggle = () => {
+    if (isScreenShareOn) {
+      stopScreenShare();
+      setIsScreenShareOn(false);
+    } else {
+      stopWebCam();
+      setIsWebCamOn(false);
+      startScreenShare();
+      setIsScreenShareOn(true);
+    }
+  };
+
+  const startScreenShare = async () => {
+    try {
+      if (screenShareStreamRef.current) {
+        console.log("Screen share already active.");
+        return;
+      }
+  
+      const screenShareStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+      screenShareStreamRef.current = screenShareStream;
+  
+      if (videoRef.current) {
+        videoRef.current.srcObject = screenShareStream;
+        videoRef.current.play(); // Ensure the video starts playing
+      }
+  
+      if (videoIntervalRef.current) {
+        clearInterval(videoIntervalRef.current);
+      }
+  
+      videoIntervalRef.current = setInterval(() => {
+        captureImage();
+      }, 1000);
+  
+      console.log("Screen share has started");
+  
+    } catch (err) {
+      console.error("Error accessing the screen: ", err);
+    }
+  };
+  
+
+  const stopScreenShare = () => {
+    if (screenShareStreamRef.current) {
+      screenShareStreamRef.current.getTracks().forEach((track) => track.stop());
+      screenShareStreamRef.current = null;
+    }
+
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+
+    if (videoIntervalRef.current) {
+      clearInterval(videoIntervalRef.current);
+      videoIntervalRef.current = null;
+      console.log(videoIntervalRef)
+    }
+
+    console.log("Screen Share stopped.");
   }
 
   const startWebCam = async () => {
@@ -352,37 +425,16 @@ export default function Home() {
     const buffer = new ArrayBuffer(pcmData.current.length * 2); // 2 bytes per 16-bit integer
     const view = new DataView(buffer);
 
-    // console.log("pcmData.current before the foreach operation:", pcmData.current);
-    // console.log("buffer before:", buffer);
-    // console.log("view before:", view);
-
     pcmData.current.forEach((value, index) => {
       view.setInt16(index * 2, value, true); // Write PCM data as 16-bit integers
     });
 
-    // console.log("pcmData.current after the foreach operation:", pcmData.current);
-
-    // const uint8Array = new Uint8Array(buffer);
-    // let base64String = "";
-    // const chunkSize = 1024 * 100 ; // Process 1024 bytes at a time
-
-    // for (let i = 0; i < uint8Array.length; i += chunkSize) {
-    //   const chunk = uint8Array.slice(i, i + chunkSize);
-    //   base64String += String.fromCharCode(...chunk);
-    // }
-
-    // const base64 = btoa(base64String);
-
     const uint8Array = new Uint8Array(buffer);
-    const binaryString = String.fromCharCode(...uint8Array);
+    // const binaryString = String.fromCharCode(...uint8Array);
+    const binaryString = Array.from(uint8Array, byte => String.fromCharCode(byte)).join('');
     const base64 = btoa(binaryString);
 
     sendVoiceMessage(base64);
-
-    // console.log("pcmData.current:", pcmData.current);
-    // console.log("buffer:", buffer);
-    // console.log("view:", view);
-    // console.log("base64:", base64);
 
     pcmData.current = [];
   }
@@ -438,8 +490,142 @@ export default function Home() {
     }
  }
 
+ const handleSendMessage = async () => {
+  if (!inputMessage.trim()) return;
+
+  setMessages((prevMessages) => [...prevMessages, { text: inputMessage, sender: "user" }]);
+
+  // if (!webSocketRef.current || webSocketRef.current.readyState !== WebSocket.OPEN) {
+  //   console.log("WebSocket is not initialized or not open.");
+  //   return;
+  // }
+
+  // const payload = {
+  //   realtime_input: {
+  //     media_chunks: [
+  //       {
+  //         mime_type: "text",
+  //         data: inputMessage
+  //       }
+  //     ]
+  //   }
+  // }
+
+  // webSocketRef.current.send(JSON.stringify(payload));
+
+  const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+
+  const result = await model.generateContent(inputMessage);
+  displayMessage({ text: result.response.text(), sender: "ai"});
+  
+
+  setInputMessage(""); // Clear input field after sending
+};
+
+
+
   return (
-    <div className="p-10 flex flex-col items-center min-h-screen">
+    <div className="flex w-screen h-screen">
+      <div className=" w-1/5 bg-zinc-900 p-5 ">
+        <div className="p-2 rounded-full hover:bg-zinc-700 w-fit">
+          <FaTimes size={20} />
+        </div>
+      </div>
+
+      <div className="w-full bg-zinc-950">
+
+        <div className=" text-lg font-bold p-4">
+          Google Gemini Chatbot
+        </div>
+
+        <div
+          id="chatLog"
+          className="p-4 text-lg h-3/4 overflow-y-auto"
+        >
+          {messages.map((msg, index) => (
+            <div key={index} className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start"} m-4 gap-3`}>
+              { msg.sender === "ai" ? (
+                <div className="p-2 h-max rounded-full border border-zinc-700">
+                  <FaStar size={20} />
+                </div>
+              ):(
+                null
+              )}
+              <div className={`p-3 px-4 max-w-3/4 w-fit text-sm rounded-3xl ${msg.sender === "user" ? "bg-blue-950 text-white text-end" : "bg-gray-800 text-white"}`}>
+                  {msg.text}
+              </div>
+            </div>
+          ))}
+
+          {(isWebCamOn || isScreenShareOn) && (
+            <div className="border-2 rounded-lg absolute bottom-4 right-4">
+              <video ref={videoRef} className="w-60 h-auto rounded-md" autoPlay></video>
+            </div>
+          )}
+
+        <div>
+          <canvas ref={ canvasRef } className="hidden"></canvas>
+        </div>
+
+        </div>
+
+        <div className=" text-lg rounded-2xl p-4 pb-2 px-6 mx-56 bg-zinc-900 mt-3">
+          <input
+            type="text"
+            placeholder="Message HealthiAI..."
+            className="flex-grow bg-transparent text-white placeholder-gray-500 outline-none w-full mb-4"
+            value={inputMessage}
+            onChange={(e) => setInputMessage(e.target.value)}
+            onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
+          />
+
+          <div className="flex items-center justify-between text-gray-400 w-full">
+            {/* Left Side - Microphone, Webcam, Screen Share */}
+            <div className="flex items-center gap-x-2">
+              {/* Microphone */}
+              <button 
+                className={isMicOn ? "p-3 rounded-full border bg-zinc-700" : "p-3 rounded-full border border-zinc-800 hover:bg-zinc-700"}
+                onClick={handleMicToggle}
+              >
+                <FaMicrophone size={16} />
+              </button>
+
+              {/* Webcam */}
+              <button 
+                className={isWebCamOn ? "p-3 rounded-full border bg-zinc-700" : "p-3 rounded-full border border-zinc-800 hover:bg-zinc-700"}
+                onClick={handleWebCamToggle}
+              >
+                <FaVideo size={16} />
+              </button>
+
+              {/* Screen Share */}
+              <button 
+                className={isScreenShareOn ? "p-3 rounded-full border bg-zinc-700" : "p-3 rounded-full border border-zinc-800 hover:bg-zinc-700"}
+                onClick ={handleScreenShareToggle}  
+              >
+                <FaDesktop size={16} />
+              </button>
+              
+            </div>
+
+            {/* Right Side - Send Button */}
+            <button className="p-4 bg-blue-500 rounded-full text-white text-sm rounded- hover:bg-blue-600"
+              onClick={handleSendMessage}
+            >
+              <FaPaperPlane size={18}/>
+            </button>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+    
+  );
+}
+
+
+{/* <div className="p-10 flex flex-col items-center min-h-screen">
       <div className=" text-white rounded-lg border-2 p-4">
         <h1 className="text-xl font-semibold">Gemini Live Demo</h1>
       </div>
@@ -486,6 +672,4 @@ export default function Home() {
         ))}
       </div>
 
-    </div>
-  );
-}
+    </div> */}
