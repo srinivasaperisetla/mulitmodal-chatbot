@@ -3,5 +3,5 @@ websockets
 google-genai==0.3.0
 python-dotenv
 pydub
-audioop-lts
 google-generativeai
+wave

@@ -12,12 +12,18 @@ import wave
 # import ssl
 
 from dotenv import load_dotenv
+print("STARTING BACKEND SERVER")
 
 load_dotenv()  # Load environment variables from .env
 api_key = os.getenv("GOOGLE_API_KEY")
-generative.configure(api_key=os.environ['GOOGLE_API_KEY'])
+
+print(f"GOOGLE_API_KEY from env: {api_key}")  # Debugging
+
 if not api_key:
     raise ValueError("API key not found. Ensure it's defined in the .env file.")
+
+generative.configure(api_key=os.environ['GOOGLE_API_KEY'])
+
 
 MODEL = "gemini-2.0-flash-exp"  
 TRANSCRIPTION_MODEL = "gemini-1.5-flash-8b"
@@ -137,8 +143,8 @@ async def gemini_session_handler(client_websocket: websockets.WebSocketServerPro
                           function_responses.append(
                             {
                               "name": name,
-                              "response": {"result": "The light is broken."},
-                              # "response": {"result": result},
+                              # "response": {"result": "The light is broken."},
+                              "response": {"result": result},
                               "id": call_id  
                             }
                           )
@@ -258,13 +264,14 @@ def convert_pcm_to_mp3(pcm_data):
     print(f"Error converting PCM to MP3: {e}")
     return None
 
-async def main() -> None:
-  async with websockets.serve(gemini_session_handler, "localhost", 9080):
-    print("Running websocket server on localhost:9080...")
-    await asyncio.Future()  # Keep the server running indefinitely
+async def main():
+    print("Running WebSocket server on ws://0.0.0.0:9080...")
+    server = await websockets.serve(gemini_session_handler, "0.0.0.0", 9080)
+    await server.wait_closed()  # ✅ Keep the server running
 
 if __name__ == "__main__":
-  asyncio.run(main())
+    asyncio.run(main())
+
 
 
 #MAIN APPLICATION BACKEND SCRIPT

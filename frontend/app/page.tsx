@@ -7,8 +7,8 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export default function Home() {
 
-  const API_KEY = "";
-  const genAI = new GoogleGenerativeAI(API_KEY);  
+  // const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_API_KEY || "";
+  // const genAI = new GoogleGenerativeAI(API_KEY);
 
   const[isMicOn, setIsMicOn] = useState(false);
   const[isWebCamOn, setIsWebCamOn] = useState(false);
@@ -39,6 +39,11 @@ export default function Home() {
   const webSocketRef = useRef<WebSocket | null>(null);
 
   const URL = "ws://localhost:9080";
+  // const URL = "ws://backend:9080";
+
+  // const URL = process.env.NEXT_PUBLIC_BACKEND_WS || "ws://backend:9080";
+
+
 
   useEffect(() => {
     connect();
@@ -513,10 +518,15 @@ export default function Home() {
 
   // webSocketRef.current.send(JSON.stringify(payload));
 
-  const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+  const response = await fetch("/api", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ inputMessage }),
+  });
 
-  const result = await model.generateContent(inputMessage);
-  displayMessage({ text: result.response.text(), sender: "ai"});
+  const data = await response.json();
+
+  displayMessage({ text: data.text, sender: "ai" });
   
 
   setInputMessage(""); // Clear input field after sending
