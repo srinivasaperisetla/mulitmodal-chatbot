@@ -1,15 +1,15 @@
 import { db } from '../db';
-import { user, User } from '../schema';
+import { users } from '../schema';
 import { genSaltSync, hashSync } from 'bcrypt-ts';
 
 
-export async function createUser(data: User) {
+export async function createUser(email: string, password: string) {
     const salt = genSaltSync(10);
-    const hash = hashSync(data.password, salt);
+    const hash = hashSync(password, salt);
 
     try {
-        await db.insert(user).values({
-            email: data.email,
+        await db.insert(users).values({
+            email: email,
             password: hash,
             createdAt: new Date(),
         })

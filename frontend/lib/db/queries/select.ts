@@ -1,25 +1,31 @@
 import { db } from "../db";
-import { compare } from 'bcrypt-ts'; 
-import { user } from "../schema";
+import { users } from "../schema";
 import { eq } from "drizzle-orm";
 
-export async function getUser(email: string, password: string) {
-    try {
-        const userData = await db.select().from(user).where(eq(user.email, email)).execute();
 
-        // If the user is not found, return null
+
+export async function getUser(email: string) {
+    try {
+        const userData = await db.select().from(users).where(eq(users.email, email)).execute();
+
         if (userData.length === 0) {
             console.error("User not found in database");
             return null;
         }
+        return userData[0];
+    } catch (error) {
+        console.error("Failed to get user from database:", error);
+        throw error;
+    }
+}
 
-        const { password: hashedPassword } = userData[0];
+// get user by id
+export async function getUserById(id: string) {
+    try {
+        const userData = await db.select().from(users).where(eq(users.id, id)).execute();
 
-        // Compare password with the hashed password from the database
-        const isPasswordValid = await compare(password, hashedPassword);
-
-        if (!isPasswordValid) {
-            console.error("Incorrect password");
+        if (userData.length === 0) {
+            console.error("User not found in database");
             return null;
         }
         return userData[0];
