@@ -4,7 +4,9 @@ import React from 'react'
 const Navbar = () => {
     const { data: session, status, update } = useSession()
   return (
-    
+    <div>
+      
+    </div>
   )
 }
 
