@@ -1,5 +1,4 @@
 "use client";
-import Image from "next/image";
 import { useState, useRef, useEffect } from "react";
 import {
   FaMicrophone,
@@ -7,7 +6,6 @@ import {
   FaVideo,
   FaDesktop,
   FaStar,
-  FaTimes,
 } from "react-icons/fa";
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
@@ -15,12 +13,16 @@ import { useSession } from "next-auth/react";
 import LoginPage from "@/components/Login";
 import { toast } from "sonner";
 import SidebarSec from "@/components/Sidebar";
+import { useSidebar } from "@/components/ui/sidebar";
+import { PanelBottom } from "lucide-react";
+import { HiMiniBars3BottomLeft } from "react-icons/hi2";
 
 export default function Home() {
   // const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_API_KEY || "";
   // const genAI = new GoogleGenerativeAI(API_KEY);
 
   const { data: session, status, update } = useSession();
+  const { state, toggleSidebar, isMobile } = useSidebar();
 
   const [isMicOn, setIsMicOn] = useState(false);
   const [isWebCamOn, setIsWebCamOn] = useState(false);
@@ -549,115 +551,136 @@ export default function Home() {
   };
 
   return (
-      <div className="flex flex-1 w-full h-svh ">
-        <SidebarSec />
+    <div className="flex flex-1 w-full h-svh ">
+      <SidebarSec />
 
-        <div className="w-full h-full flex-1 flex flex-col pb-5 bg-[#252424]">
+      <div className="w-full h-full flex-1 flex flex-col pb-5 bg-[#252424]">
+        {!isMobile && (
           <div className=" sticky text-white bg-transparent h-[4em] w-full flex items-center justify-between px-10">
-            <p>HiAgents Chatbot</p>
-            <p>{session?.user?.email}</p>
-          </div>
-
-          <div id="chatLog" className="p-4 text-lg h-3/4 overflow-y-auto">
-            {messages.map((msg, index) => (
+            {state === "collapsed" && (
               <div
-                key={index}
-                className={`flex ${
-                  msg.sender === "user" ? "justify-end" : "justify-start"
-                } m-4 gap-3`}
+                onClick={toggleSidebar}
+                className="flex items-center justify-center cursor-pointer bg-transparent rounded-sm h-8 w-8"
               >
-                {msg.sender === "ai" ? (
-                  <div className="p-2 h-max rounded-full border border-zinc-700">
-                    <FaStar size={20} />
-                  </div>
-                ) : null}
-                <div
-                  className={`p-3 px-4 max-w-3/4 w-fit text-sm rounded-3xl ${
-                    msg.sender === "user"
-                      ? "bg-blue-950 text-white text-end"
-                      : "bg-gray-800 text-white"
-                  }`}
-                >
-                  {msg.text}
-                </div>
-              </div>
-            ))}
-
-            {(isWebCamOn || isScreenShareOn) && (
-              <div className="border-2 rounded-lg absolute bottom-4 right-4">
-                <video
-                  ref={videoRef}
-                  className="w-60 h-auto rounded-md"
-                  autoPlay
-                ></video>
+                <PanelBottom className="text-white text-[30px] size-full rotate-90" />
               </div>
             )}
-
-            <div>
-              <canvas ref={canvasRef} className="hidden"></canvas>
-            </div>
+            <p className="text-[17px]">HiAgents Chatbot</p>
           </div>
+        )}``
 
-          <div className=" text-lg rounded-2xl p-4 pb-2 px-6 mx-56 bg-zinc-900 ">
-            <input
-              type="text"
-              placeholder="Message HealthiAI..."
-              className="flex-grow bg-transparent text-white placeholder-gray-500 outline-none w-full mb-4"
-              value={inputMessage}
-              onChange={(e) => setInputMessage(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
-            />
+        {isMobile && (
+          <div className=" sticky text-white bg-transparent h-[4em] w-full flex items-center justify-between px-5">
+            <button
+              className="p-1 rounded-md border border-zinc-200 hover:bg-zinc-700"
+              onClick={toggleSidebar}
+            >
+              <HiMiniBars3BottomLeft className="text-white" />
+            </button>
+            <p className="text-[12px] sm:text-[18px]">HiAgents Chatbot</p>
+          </div>
+        )}
 
-            <div className="flex items-center justify-between text-gray-400 w-full">
-              {/* Left Side - Microphone, Webcam, Screen Share */}
-              <div className="flex items-center gap-x-2">
-                {/* Microphone */}
-                <button
-                  className={
-                    isMicOn
-                      ? "p-3 rounded-full border bg-zinc-700"
-                      : "p-3 rounded-full border border-zinc-800 hover:bg-zinc-700"
-                  }
-                  onClick={handleMicToggle}
-                >
-                  <FaMicrophone size={16} />
-                </button>
-
-                {/* Webcam */}
-                <button
-                  className={
-                    isWebCamOn
-                      ? "p-3 rounded-full border bg-zinc-700"
-                      : "p-3 rounded-full border border-zinc-800 hover:bg-zinc-700"
-                  }
-                  onClick={handleWebCamToggle}
-                >
-                  <FaVideo size={16} />
-                </button>
-
-                {/* Screen Share */}
-                <button
-                  className={
-                    isScreenShareOn
-                      ? "p-3 rounded-full border bg-zinc-700"
-                      : "p-3 rounded-full border border-zinc-800 hover:bg-zinc-700"
-                  }
-                  onClick={handleScreenShareToggle}
-                >
-                  <FaDesktop size={16} />
-                </button>
-              </div>
-
-              {/* Right Side - Send Button */}
-              <button
-                className="p-4 bg-blue-500 rounded-full text-white text-sm rounded- hover:bg-blue-600"
-                onClick={handleSendMessage}
+        <div id="chatLog" className="p-4 text-lg h-3/4 overflow-y-auto">
+          {messages.map((msg, index) => (
+            <div
+              key={index}
+              className={`flex ${
+                msg.sender === "user" ? "justify-end" : "justify-start"
+              } m-4 gap-3`}
+            >
+              {msg.sender === "ai" ? (
+                <div className="p-2 h-max rounded-full border border-zinc-700">
+                  <FaStar size={20} />
+                </div>
+              ) : null}
+              <div
+                className={`p-3 px-4 max-w-3/4 w-fit text-sm rounded-3xl ${
+                  msg.sender === "user"
+                    ? "bg-blue-950 text-white text-end"
+                    : "bg-gray-800 text-white"
+                }`}
               >
-                <FaPaperPlane size={18} />
+                {msg.text}
+              </div>
+            </div>
+          ))}
+
+          {(isWebCamOn || isScreenShareOn) && (
+            <div className="border-2 rounded-lg absolute bottom-4 right-4">
+              <video
+                ref={videoRef}
+                className="w-60 h-auto rounded-md"
+                autoPlay
+              ></video>
+            </div>
+          )}
+
+          <div>
+            <canvas ref={canvasRef} className="hidden"></canvas>
+          </div>
+        </div>
+
+        <div className=" text-lg rounded-2xl p-4 pb-2 px-6 w-[90%] sm:w-[70%] lg:w-[50%] mx-auto bg-zinc-900 ">
+          <input
+            type="text"
+            placeholder="Message HealthiAI..."
+            className="flex-grow bg-transparent text-white placeholder-gray-500 outline-none w-full mb-4"
+            value={inputMessage}
+            onChange={(e) => setInputMessage(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
+          />
+
+          <div className="flex items-center justify-between text-gray-400 w-full">
+            {/* Left Side - Microphone, Webcam, Screen Share */}
+            <div className="flex items-center gap-x-2">
+              {/* Microphone */}
+              <button
+                className={
+                  isMicOn
+                    ? "p-3 rounded-full border bg-zinc-700"
+                    : "p-3 rounded-full border border-zinc-800 hover:bg-zinc-700"
+                }
+                onClick={handleMicToggle}
+              >
+                <FaMicrophone size={16} />
+              </button>
+
+              {/* Webcam */}
+              <button
+                className={
+                  isWebCamOn
+                    ? "p-3 rounded-full border bg-zinc-700"
+                    : "p-3 rounded-full border border-zinc-800 hover:bg-zinc-700"
+                }
+                onClick={handleWebCamToggle}
+              >
+                <FaVideo size={16} />
+              </button>
+
+              {/* Screen Share */}
+              <button
+                className={
+                  isScreenShareOn
+                    ? "p-3 rounded-full border bg-zinc-700"
+                    : "p-3 rounded-full border border-zinc-800 hover:bg-zinc-700"
+                }
+                onClick={handleScreenShareToggle}
+              >
+                <FaDesktop size={16} />
               </button>
             </div>
+
+            {/* Right Side - Send Button */}
+            <button
+              className="p-4 bg-blue-500 rounded-full text-white text-sm rounded- hover:bg-blue-600"
+              onClick={handleSendMessage}
+            >
+              <FaPaperPlane size={10} />
+            </button>
           </div>
         </div>
       </div>
+    </div>
   );
 }
