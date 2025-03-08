@@ -3,7 +3,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export async function POST(req: Request) {
   try {
-    const API_KEY = process.env.GOOGLE_API_KEY; // Securely access API key from backend
+    const API_KEY = process.env.GOOGLE_API_KEY;
 
     if (!API_KEY) {
       return NextResponse.json({ error: "API key not found" }, { status: 500 });
@@ -12,7 +12,7 @@ export async function POST(req: Request) {
     const { inputMessage } = await req.json();
     
     const genAI = new GoogleGenerativeAI(API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-pro-exp-02-05" });
 
     const result = await model.generateContent(inputMessage);
     const aiResponse = result.response.text();
