@@ -2,7 +2,5 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # env files (can opt-in for committing if needed)
-*.env
-
 .venv
-.env
+.env*
